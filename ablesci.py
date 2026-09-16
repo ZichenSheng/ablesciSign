@@ -81,8 +81,7 @@ def load_env_file():
         print(f"警告：存在无键账号行，但 {ENV_ACCOUNTS} 已通过系统或标准键值对设置，忽略无键行")
 
     if ENV_ACCOUNTS in os.environ:
-        val = os.environ[ENV_ACCOUNTS]
-        print(f"当前 {ENV_ACCOUNTS} 内容预览: {val[:100]}{'...' if len(val) > 100 else ''}")
+        print(f"当前 {ENV_ACCOUNTS} 已加载（内容已隐藏）")
 
 load_env_file()
 
@@ -208,15 +207,25 @@ class AbleSciAuto:
         self.notifier.log(message, level)
         
     def get_csrf_token(self):
-        """获取CSRF令牌"""
+        """获取CSRF令牌，兼容科研通新版登录页。"""
         login_url = "https://www.ablesci.com/site/login"
         try:
             response = self.session.get(login_url, headers=self.headers, timeout=30)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                csrf_token = soup.find('input', {'name': '_csrf'})
-                if csrf_token:
-                    return csrf_token.get('value', '')
+
+                meta = soup.find('meta', {'name': 'csrf-token'})
+                if meta and meta.get('content'):
+                    return meta.get('content', '').strip()
+
+                csrf_input = soup.find('input', {'name': '_csrf'})
+                if csrf_input:
+                    return csrf_input.get('value', '').strip()
+
+                self.log(
+                    "CSRF令牌元素未找到（新版 meta 与旧版 input 均不存在）",
+                    "error"
+                )
             else:
                 self.log(f"获取CSRF令牌失败，状态码: {response.status_code}", "error")
         except Exception as e:
@@ -424,7 +433,7 @@ def get_accounts():
         elif "|" in account:
             email, password = account.split("|", 1)
         else:
-            print(f"警告：跳过格式错误的账号项: {account}")
+            print("警告：跳过格式错误的账号项（内容已隐藏）")
             continue
             
         email = email.strip()
@@ -432,7 +441,7 @@ def get_accounts():
         if email and password:
             valid_accounts.append((email, password))
         else:
-            print(f"警告：账号或密码为空: {email}:{password}")
+            print("警告：账号或密码为空（内容已隐藏）")
     
     return valid_accounts
 
