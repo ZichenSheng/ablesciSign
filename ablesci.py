@@ -396,8 +396,7 @@ def get_accounts():
     if not accounts_env:
         return []
     
-    # 调试输出
-    print(f"原始账号环境变量内容: {repr(accounts_env)}")
+   
     
     accounts = []
     # 支持换行符、分号、逗号分隔
